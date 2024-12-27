@@ -1,5 +1,5 @@
 # R project settings
-.Rproj.user
+.Rproj.user/
 .Rhistory
 .RData
 .Ruserdata
@@ -19,17 +19,12 @@ azfanpage_comments_db.duckdb
 # Local database credentials
 .my.cnf
 
-# Also
-.gitignore
-.my.cnf.rtf
-keys to the bentleys.rtf
-
-# Ignore node_modules directory
+# Node.js dependencies
 node_modules/
 
-# Ignore logs and temporary files
+# Logs and temporary files
 *.log
 *.tmp
 
-# Ignore environment files
+# Environment files
 .env
