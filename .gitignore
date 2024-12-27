@@ -4,6 +4,7 @@
 .RData
 .Ruserdata
 .my.cnf
+.my.cnf.rtf
 
 # Ignore all .Rproj files
 *.Rproj
