@@ -9,7 +9,9 @@
 
 # load data
 {
-	emotions <- readRDS("~/Documents/GitHub/AZFanpage_Comments/emotions_2020.rds")
+	emotions <- readRDS("~/Documents/GitHub/AZFanpageComments/LLM Mining/Data from runs/2020/emotions_2020.rds")
+	emotions <- emotions_intensity
+	emotions_db_nb <- emotions_db |> filter(emotion != "")
 }
 
 # emotions cleanup

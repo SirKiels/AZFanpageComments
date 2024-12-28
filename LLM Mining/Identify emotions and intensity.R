@@ -91,7 +91,7 @@ sentimentanalyzer <- function(prompt) {
     stop(paste("Request failed with status code", status_code(response)))
   }
 }  
-  
+
 # Call on LLM to identify sentiment intensity
 F1_Primary_Emotions <- function(df, LLM) {
   P1_emotion_primary <- 
@@ -230,7 +230,7 @@ F4_Identify_Emotions <- function(df, LLM) {
 # Call on DuckDB to create dataframe to enrich
 {
 # Create a connection to the database
-db_file <- "azfanpage_comments_db.duckdb"
+db_file <- "/Users/samuel/Documents/GitHub/AZFanpageComments/azfanpage_comments_db.duckdb"
 con <- dbConnect(duckdb::duckdb(), dbdir = db_file, read_only = FALSE)	
 
 query_col_id_comments <- 
@@ -256,7 +256,7 @@ dbDisconnect(con)
 # `Batch estimate in seconds` 5280
 # `Batch estimate in minutes` 88
 # Actual time: 77
-emotions_p <- F1_Primary_Emotions(comments_id_rawmessage_50, dorian2b)
+emotions_p <- F1_Primary_Emotions(comments_id_rawmessage_2020, dorian2b)
 emotions_p_s <- F1_1_Identify_Emotions_spec(emotions_p, dorian2b)
 emotions_p_s_i <- F1_2_Emotion_Intensity(emotions_p_s, dorian2b)
 
