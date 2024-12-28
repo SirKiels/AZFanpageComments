@@ -24,6 +24,7 @@ Little scraping and text-mining project using the [AZFanpage](https://www.azfanp
 -- Develop and test LLM analysis for:
 - Genre & Topic ✓
 - PSTETC ✓
+- PSTETC v2 🛑
 - Emotions ✓
 - Sentiment & Emotional intensity ✓
 - Sentiment & Emotional intensity v2 ✓
