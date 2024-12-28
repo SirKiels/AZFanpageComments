@@ -26,10 +26,10 @@ Little scraping and text-mining project using the AZFanpage comments.
 - PSTETC ✓
 - Emotions ✓
 - Sentiment & Emotional intensity ✓
-- Sentiment & Emotional intensity v2 🛑
+- Sentiment & Emotional intensity v2 ✓
 
 -- Experimental run on 2020 data:
-- Run batches as background jobs to create 2020 set 🛑
+- Run batches as background jobs to create 2020 set ✓
 - Tokenize and clean-up in preparation for storage 🛑
 - Store in duckdb 🛑
 - Develop and test statistical scripts 🛑

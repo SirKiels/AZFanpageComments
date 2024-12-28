@@ -1,83 +1,200 @@
 # Clean up files and send to duckdb
 
-# packages
+# Directory
+{
+#getwd()
+#setwd("~/Users/samuel/Documents/GitHub/AZFanpageComments")
+}
+
+# Packages
 {
 	library(dplyr)
 	library(stringr)
 	library(tidyr)
 }
 
-# load data
+# DuckDB overview
 {
-	emotions <- readRDS("~/Documents/GitHub/AZFanpageComments/LLM Mining/Data from runs/2020/emotions_2020.rds")
-	emotions <- emotions_intensity
-	emotions_db_nb <- emotions_db |> filter(emotion != "")
+# Create a connection to the database
+db_file <- "azfanpage_comments_db.duckdb"
+con <- dbConnect(duckdb::duckdb(), dbdir = db_file, read_only = FALSE)
+
+# Overview
+tables <- dbListTables(con)
+as_tibble(tables)
+remove(tables)
+
+# Disconnect from the database
+dbDisconnect(con)
 }
 
-# emotions cleanup
+# Emotions
+emotions <- readRDS("~/Documents/GitHub/AZFanpageComments/LLM Mining/Data from runs/2020/emotions_2020.rds")
+{
+
+# Cleanup
 {
 	emotions_db <- emotions |> 
-	mutate(
-    emotion_intensity = str_remove_all(emotion_intensity, "[\\[\\]]"), # Remove square brackets
-    emotion_intensity = str_split(emotion_intensity, "; ") # Split into list of strings
-  ) |> 
-  unnest(emotion_intensity) |> # Expand the list into rows
-  separate(emotion_intensity, into = c("emotion", "emotion_intensity"), sep = ", ", convert = TRUE) |> 
-  mutate(
-    emotion = str_to_lower(emotion), # Convert to lowercase
-    emotion_intensity = as.numeric(emotion_intensity) # Ensure numeric values
-  )
-
+		filter(emotion_intensity != "") |>
+		mutate(
+	    emotion_intensity = str_remove_all(emotion_intensity, "[\\[\\]]"), # Remove square brackets
+	    emotion_intensity = str_split(emotion_intensity, "; ") # Split into list of strings
+	  ) |> 
+	  unnest(emotion_intensity) |> # Expand the list into rows
+	  separate(emotion_intensity, into = c("emotion", "emotion_intensity"), sep = ", ", convert = TRUE) |> 
+	  mutate(
+	    emotion = str_to_lower(emotion), # Convert to lowercase
+	    emotion_intensity = as.numeric(emotion_intensity) # Ensure numeric values
+	  ) |> 
+		select(-2) # Drop comment itself. Id = key
+	
+	remove(emotions)
 }
 
-# Emotions visuals
+# Send to DuckDB
 {
-# Frequency count of unique values
-emotion_counts <- as.data.frame(table(emotions_db$emotion))
-colnames(emotion_counts) <- c("Emotion", "Count")
+# Create a connection to the database
+db_file <- "azfanpage_comments_db.duckdb"
+con <- dbConnect(duckdb::duckdb(), dbdir = db_file, read_only = FALSE)	
 
-# Arrange and filter the top 20 most frequent emotions
-top_n <- 50
-top_emotions <- emotion_counts %>%
-  arrange(desc(Count)) %>%
-  mutate(Emotion = as.character(Emotion)) %>%
-  slice(1:top_n)
+# Write the data frame to a table in DuckDB
+dbWriteTable(con, "emotions", emotions_db, overwrite = TRUE)
 
-# Combine all others into "Other" category
-top_emotions <- rbind(
-  top_emotions,
-  data.frame(Emotion = "Other", Count = sum(emotion_counts$Count) - sum(top_emotions$Count))
-)
+# Check
+result <- as_tibble(dbGetQuery(con, "SELECT * FROM emotions"))
+result
+remove(result, emotions_db)
 
-# Create the bar plot
-ggplot(top_emotions, aes(x = reorder(Emotion, -Count), y = Count, fill = Emotion)) +
-  geom_bar(stat = "identity") +
-  theme_minimal() +
-  labs(title = paste("Top", top_n, "Emotions with Frequencies"), x = "Emotion", y = "Count") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  guides(fill = "none")  # Remove legend for simplicity
+# Disconnect from the database
+dbDisconnect(con)
+}
+}
 
-# Filter for the top 10 emotions by frequency
-top_n <- 10
-top_emotions <- emotions_db %>%
-  count(emotion) %>%
-  arrange(desc(n)) %>%
-  slice(1:top_n) %>%
-  pull(emotion)
+# genre_topics into genre and topics
+genre_topics <- readRDS("~/Documents/GitHub/AZFanpageComments/LLM Mining/Data from runs/2020/comments_gt_2020.rds")
+{
 
-# Filter the dataset for these emotions
-filtered_data <- emotions_db %>%
-  filter(emotion %in% top_emotions)
+# Cleanup and break up into genre and topic
+{
+	genre_db <- genre_topics |> 
+		select(-2, -3, -5) |>  # drop columns. Id = key
+	  mutate(
+	    genre = str_replace_all(genre, "\\s+", ", "),          # Replace spaces with ", "
+	    genre = str_replace_all(genre, ",+", ","),            # Replace multiple commas with a single comma
+	  			) |> 
+		separate_rows(genre, sep = ",") |>  # Split on a single comma
+		mutate(
+    	genre = str_trim(genre),       # Trim spaces from `genre`
+  				) |> 
+		mutate(
+    	genre = tolower(genre),       # Convert `genre` to lowercase
+  				)
+	
+		topics_db <- genre_topics |> 
+		select(-2, -3, -4) |>  # drop columns. Id = key
+	  mutate(
+	    topics = str_replace_all(topics, "\\s+", ", "),        # Replace spaces with ", "
+	    topics = str_replace_all(topics, ",+", ",")           # Replace multiple commas with a single comma
+	  			) |> 
+		separate_rows(topics, sep = ",") |>  # Split on a single comma
+		mutate(
+    	topics = str_trim(topics)     # Trim spaces from `topics`
+  				) |> 
+		mutate(
+    	topics = tolower(topics)      # Convert `topics` to lowercase
+  				)
+	
+	remove(genre_topics)
+}
 
-# Create the box plot
-ggplot(filtered_data, aes(x = emotion, y = emotion_intensity, fill = emotion)) +
-  geom_boxplot(outlier.shape = NA) + # Exclude outliers for clarity
-  theme_minimal() +
-  labs(
-    title = "Distribution of Emotion Intensity for Top Emotions",
-    x = "Emotion",
-    y = "Emotion Intensity"
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  guides(fill = "none")  # Remove legend for simplicity
+# Send to DuckDB
+{
+# Create a connection to the database
+db_file <- "azfanpage_comments_db.duckdb"
+con <- dbConnect(duckdb::duckdb(), dbdir = db_file, read_only = FALSE)	
+
+# Write the data frame to a table in DuckDB
+dbWriteTable(con, "genre", genre_db, overwrite = TRUE)
+dbWriteTable(con, "topics", topics_db, overwrite = TRUE)
+
+# Check
+result <- as_tibble(dbGetQuery(con, "SELECT * FROM genre"))
+result2 <- as_tibble(dbGetQuery(con, "SELECT * FROM topics"))
+result
+result2
+
+remove(result, result2, genre_db, topics_db)
+
+# Disconnect from the database
+dbDisconnect(con)
+}
+}
+
+# Sentiment
+sentiment <- readRDS("~/Documents/GitHub/AZFanpageComments/LLM Mining/Data from runs/2020/sentiment_2020.rds")
+{
+
+# Cleanup
+{
+	sentiment_db <- sentiment |> 
+		select(-2) |> 
+		mutate(sentiment = trimws(sentiment),         # Remove any leading/trailing whitespace
+         sentiment = as.numeric(sentiment)) |>  # Convert to numeric
+  	filter(!is.na(sentiment)) 									# Filter out rows with NA values	
+		
+	remove(sentiment)
+}
+
+# Send to DuckDB
+{
+# Create a connection to the database
+db_file <- "azfanpage_comments_db.duckdb"
+con <- dbConnect(duckdb::duckdb(), dbdir = db_file, read_only = FALSE)	
+
+# Write the data frame to a table in DuckDB
+dbWriteTable(con, "sentiment", sentiment_db, overwrite = TRUE)
+
+# Check
+result <- as_tibble(dbGetQuery(con, "SELECT * FROM sentiment"))
+result
+remove(result, sentiment_db)
+
+# Disconnect from the database
+dbDisconnect(con)
+}
+}
+
+# playerstaffetc
+# IN PROGRESS
+playerstaffetc <- readRDS("~/Documents/GitHub/AZFanpageComments/LLM Mining/Data from runs/2020/playerstaffetc_2020.rds")
+{
+
+# Cleanup
+{
+	playerstaffetc_db <- playerstaffetc |> 
+		select(-2) |> 
+		mutate(sentiment = trimws(sentiment),         # Remove any leading/trailing whitespace
+         sentiment = as.numeric(sentiment)) |>  # Convert to numeric
+  	filter(!is.na(sentiment)) 									# Filter out rows with NA values	
+		
+	remove(sentiment)
+}
+
+# Send to DuckDB
+{
+# Create a connection to the database
+db_file <- "azfanpage_comments_db.duckdb"
+con <- dbConnect(duckdb::duckdb(), dbdir = db_file, read_only = FALSE)	
+
+# Write the data frame to a table in DuckDB
+dbWriteTable(con, "sentiment", sentiment_db, overwrite = TRUE)
+
+# Check
+result <- as_tibble(dbGetQuery(con, "SELECT * FROM sentiment"))
+result
+remove(result, sentiment_db)
+
+# Disconnect from the database
+dbDisconnect(con)
+}
 }
