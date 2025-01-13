@@ -1,5 +1,5 @@
 # R project settings
-.Rproj.user/
+.Rproj.user
 .Rhistory
 .RData
 .Ruserdata
@@ -30,3 +30,4 @@ node_modules/
 
 # Environment files
 .env
+.gitignore
